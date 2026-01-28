@@ -28,7 +28,7 @@ const scriptDomain =
       return new URL(url).origin;
     }
     return null;
-  })() || 'https://cdn.jsdelivr.net/gh/fachebot/jupiter-plugin-plus@main/public';
+  })() || 'https://jupiter-plugin-plus.pages.dev';
 
 async function loadRemote(id: string, href: string, type: 'text/javascript' | 'stylesheet') {
   return new Promise((res, rej) => {
