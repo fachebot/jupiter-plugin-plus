@@ -1,5 +1,6 @@
 @tailwind components;
 @tailwind utilities;
+
 :root {
   --jupiter-plugin-primary: 199, 242, 132;
   --jupiter-plugin-background: 0, 0, 0;
@@ -8,6 +9,7 @@
   --jupiter-plugin-interactive: 33, 42, 54;
   --jupiter-plugin-module: 16, 23, 31;
 }
+
 #jupiter-plugin * {
   box-sizing: border-box;
   font-family: Inter, sans-serif;
@@ -72,7 +74,7 @@
   -webkit-mask-composite: source-out;
 }
 
-  /* Add tooltip functionality */
+/* Add tooltip functionality */
 .jupiter-tooltip {
   @apply invisible absolute;
   @apply bg-black text-primary-text p-2 rounded-lg;
@@ -80,4 +82,18 @@
 
 .jupiter-has-tooltip:hover .jupiter-tooltip {
   @apply visible z-50;
+}
+
+/* Percentage button hover border effect */
+.percentage-button {
+  border: 2px solid transparent !important;
+  transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out;
+  font-weight: normal !important;
+}
+
+.percentage-button:hover {
+  border-color: rgba(199, 242, 132, 1) !important;
+  border-width: 2px !important;
+  border-style: solid !important;
+  font-weight: normal !important;
 }

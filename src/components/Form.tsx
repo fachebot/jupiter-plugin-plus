@@ -29,12 +29,15 @@ import { SubmitButton } from './SubmitButton';
 const FormInputContainer: React.FC<{
   tokenInfo?: Asset;
   onBalanceClick?: (e: React.MouseEvent<HTMLElement>) => void;
+  onClickHalf?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  onClickMax?: (e: React.MouseEvent<HTMLButtonElement>) => void;
   title: string;
   pairSelectDisabled: boolean;
   onClickSelectPair: () => void;
   value: string;
   children: React.ReactNode;
-}> = ({ tokenInfo, onBalanceClick, title, pairSelectDisabled, onClickSelectPair, children, value }) => {
+  isWalletConnected?: boolean;
+}> = ({ tokenInfo, onBalanceClick, onClickHalf, onClickMax, title, pairSelectDisabled, onClickSelectPair, children, value, isWalletConnected }) => {
   return (
     <div
       className={cn(
@@ -46,17 +49,69 @@ const FormInputContainer: React.FC<{
       <div className="flex justify-between items-center text-xs text-primary-text">
         <div>{title}</div>
         {tokenInfo && (
-          <div
-            className={cn('flex  space-x-1 text-xs items-center text-primary-text/50 fill-current ', {
-              'cursor-pointer': onBalanceClick,
-            })}
-            onClick={(e) => {
-              onBalanceClick?.(e);
-            }}
-          >
-            <WalletIcon width={10} height={10} />
-            <CoinBalance mintAddress={tokenInfo.id} hideZeroBalance={false} />
-            <span>{tokenInfo.symbol}</span>
+          <div className="flex items-center space-x-2">
+            <div
+              className={cn('flex  space-x-1 text-xs items-center text-primary-text/50 fill-current ', {
+                'cursor-pointer': onBalanceClick,
+              })}
+              onClick={(e) => {
+                onBalanceClick?.(e);
+              }}
+            >
+              <WalletIcon width={10} height={10} />
+              <CoinBalance mintAddress={tokenInfo.id} hideZeroBalance={false} />
+              <span>{tokenInfo.symbol}</span>
+            </div>
+            {onClickHalf && onClickMax && isWalletConnected && (
+              <div className="flex items-center space-x-1">
+                <button
+                  type="button"
+                  ref={(el) => {
+                    if (el) {
+                      el.style.border = '2px solid transparent';
+                      el.style.transition = 'border-color 0.15s ease-in-out, background-color 0.15s ease-in-out';
+                    }
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onClickHalf(e);
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'rgba(199, 242, 132, 1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'transparent';
+                  }}
+                  className="percentage-button px-2 py-0.5 text-[10px] font-normal rounded bg-interactive text-primary-text/50 hover:bg-interactive/80 focus:outline-none"
+                >
+                  HALF
+                </button>
+                <button
+                  type="button"
+                  ref={(el) => {
+                    if (el) {
+                      el.style.border = '2px solid transparent';
+                      el.style.transition = 'border-color 0.15s ease-in-out, background-color 0.15s ease-in-out';
+                    }
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onClickMax(e);
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'rgba(199, 242, 132, 1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'transparent';
+                  }}
+                  className="percentage-button px-2 py-0.5 text-[10px] font-normal rounded bg-interactive text-primary-text/50 hover:bg-interactive/80 focus:outline-none"
+                >
+                  MAX
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -102,8 +157,8 @@ const FormInputContainer: React.FC<{
 const Form: React.FC<{
   isDisabled: boolean;
   setSelectPairSelector: React.Dispatch<React.SetStateAction<'fromMint' | 'toMint' | null>>;
-}> = ({  setSelectPairSelector }) => {
-  const { publicKey, wallet } = useWalletPassThrough();
+}> = ({ setSelectPairSelector }) => {
+  const { publicKey, wallet, connected } = useWalletPassThrough();
 
   const { data: balances } = useBalances();
   const {
@@ -138,10 +193,10 @@ const Form: React.FC<{
       });
     } catch (error) {
       console.log('Swap error', error);
-    } finally{
+    } finally {
       setScreen('Swapping');
     }
-  }, [wallet, quoteResponseMeta, ultraSwapMutation, fromTokenInfo, toTokenInfo, setTxStatus, setLastSwapResult,setScreen]);
+  }, [wallet, quoteResponseMeta, ultraSwapMutation, fromTokenInfo, toTokenInfo, setTxStatus, setLastSwapResult, setScreen]);
 
 
   const shouldDisabledFromSelector = useMemo(() => {
@@ -166,7 +221,7 @@ const Form: React.FC<{
       return;
     }
     if (value === '.') {
-      setForm((form) => ({ ...form,  fromValue: '0.' }));
+      setForm((form) => ({ ...form, fromValue: '0.' }));
       return;
     }
     const isInvalid = Number.isNaN(value);
@@ -181,7 +236,7 @@ const Form: React.FC<{
       return;
     }
     if (value === '.') {
-      setForm((form) => ({ ...form,  toValue: '0.' }));
+      setForm((form) => ({ ...form, toValue: '0.' }));
       return;
     }
 
@@ -221,6 +276,37 @@ const Form: React.FC<{
       }
     },
     [balance, fromTokenInfo?.id, setForm],
+  );
+
+  const onClickHalf = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.preventDefault();
+
+      if (!balance) return;
+      if (fromTokenInfo?.id === WRAPPED_SOL_MINT.toBase58()) {
+        const balanceDecimal = new Decimal(balance);
+        if (balanceDecimal.gt(MINIMUM_SOL_BALANCE)) {
+          const availableBalance = balanceDecimal.minus(MINIMUM_SOL_BALANCE);
+          const halfAmount = availableBalance.div(2);
+          setForm((prev) => ({
+            ...prev,
+            fromValue: halfAmount.gt(0) ? halfAmount.toFixed(9) : '0',
+          }));
+        } else {
+          setForm((prev) => ({
+            ...prev,
+            fromValue: '0',
+          }));
+        }
+      } else {
+        const halfAmount = new Decimal(balance).div(2);
+        setForm((prev) => ({
+          ...prev,
+          fromValue: halfAmount.toFixed(fromTokenInfo?.decimals || 9),
+        }));
+      }
+    },
+    [balance, fromTokenInfo?.id, fromTokenInfo?.decimals, setForm],
   );
 
   const onClickSwitchPair = () => {
@@ -286,10 +372,19 @@ const Form: React.FC<{
               isToPairFocused.current = false;
               onClickMax(e);
             }}
+            onClickHalf={(e) => {
+              isToPairFocused.current = false;
+              onClickHalf(e);
+            }}
+            onClickMax={(e) => {
+              isToPairFocused.current = false;
+              onClickMax(e);
+            }}
             title="Selling"
             pairSelectDisabled={shouldDisabledFromSelector}
             onClickSelectPair={onClickSelectFromMint}
             value={form.fromValue}
+            isWalletConnected={connected}
           >
             {fromTokenInfo?.decimals && (
               <NumericFormat
